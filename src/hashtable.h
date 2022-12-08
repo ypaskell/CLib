@@ -1,4 +1,4 @@
-/* Implementing hastable in Linear Search (array)
+/* Implementing hastable in Linear Search
  * This is not a bad strategy if you’ve only got a few items
  */
 
