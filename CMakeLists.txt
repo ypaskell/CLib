@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 project(CLib)
 
-set(CMAKE_C_COMPILER "/usr/bin/gcc")
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/build)
 
 add_executable(CLib src/main.c)
