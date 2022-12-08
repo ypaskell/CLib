@@ -84,7 +84,11 @@ void map_add(map_t *map, int key, void *data)
     n->pprev = &h->first;
 }
 
-/* ToDo: map_update() */
+/* ToDo:
+ *    	map_update()
+ * 		map_delete()
+ * 		map_isempty()
+ */
 
 void map_delete(map_t *map)
 {
