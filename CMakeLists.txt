@@ -1,9 +1,6 @@
-cmake_minimum_required(VERSION 3.9.1)
-project(CLib
-  LANGUAGE C
-  DESCRIPTION "CLib for coding interview"
-)
+cmake_minimum_required(VERSION 3.5)
+project(CLib)
+
+set(CMAKE_C_COMPILER "/usr/bin/gcc")
 
 add_executable(CLib src/main.c)
-
-add_subdirectory(src)
