@@ -6,50 +6,109 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
 
-enum { _CMP_LESS = -1, _CMP_EQUAL = 0, _CMP_GREATER = 1 };
+struct hlist_node { struct hlist_node *next, **pprev; };
+struct hlist_head { struct hlist_node *first; };
+typedef struct { int bits; struct hlist_head *ht; } map_t;
 
-/* Integer comparison */
-static inline int map_cmp_int(const void *arg0, const void *arg1) {
-    int *a = (int *)arg0, *b = (int *)arg1;
-    return (*a < *b) ? _CMP_LESS : (*a > *b) ? _CMP_GREATER : _CMP_EQUAL;
+#define MAP_HASH_SIZE(bits) (1 << bits)
+
+map_t *map_init(int bits) {
+    map_t *map = malloc(sizeof(map_t));
+    if (!map)
+        return NULL;
+
+    map->bits = bits;
+    map->ht = malloc(sizeof(struct hlist_head) * MAP_HASH_SIZE(map->bits));
+    if (map->ht) {
+        for (int i = 0; i < MAP_HASH_SIZE(map->bits); i++)
+            (map->ht)[i].first = NULL;
+    } else {
+        free(map);
+        map = NULL;
+    }
+    return map;
 }
 
-/* Unsigned integer comparison */
-static inline int map_cmp_uint(const void *arg0, const void *arg1) {
-    unsigned int *a = (unsigned int *)arg0, *b = (unsigned int *)arg1;
-    return (*a < *b) ? _CMP_LESS : (*a > *b) ? _CMP_GREATER : _CMP_EQUAL;
+struct hash_key {
+    int key;
+    void *data;
+    struct hlist_node node;
+};
+
+#define container_of(ptr, type, member)               \
+    ({                                                \
+        void *__mptr = (void *) (ptr);                \
+        ((type *) (__mptr - offsetof(type, member))); \
+    })
+
+#define GOLDEN_RATIO_32 0x61C88647
+static inline unsigned int hash(unsigned int val, unsigned int bits) {
+    /* High bits are more random, so use them. */
+    return (val * GOLDEN_RATIO_32) >> (32 - bits);
 }
 
-/* Hashtable data element structure */
-typedef struct hash_elem_t {
-    void* key;
-    void* value;
-} hash_elem_t;
+static struct hash_key *find_key(map_t *map, int key) {
+    struct hlist_head *head = &(map->ht)[hash(key, map->bits)];
+    for (struct hlist_node *p = head->first; p; p = p->next) {
+        struct hash_key *kn = container_of(p, struct hash_key, node);
+        if (kn->key == key)
+            return kn;
+    }
+    return NULL;
+}
 
-/* Hashtable structure */
-typedef struct hashtable {
-    size_t capacity;    	/* Hashtable capacity (in terms of hashed keys) */
-    size_t current_size;  	/* Number of element currently stored in the hashtable */
-    int mod;
-    hash_elem_t *table;
-} hashtable_t;
+void *map_get(map_t *map, int key)
+{
+    struct hash_key *kn = find_key(map, key);
+    return kn ? kn->data : NULL;
+}
 
-//static unsigned int ht_calc_hash(char* key)
+void map_add(map_t *map, int key, void *data)
+{
+    struct hash_key *kn = find_key(map, key);
+    if (kn)
+        return;
 
-/* Constructor */
-hashtable_t* ht_new(size_t);
+    kn = malloc(sizeof(struct hash_key));
+    kn->key = key, kn->data = data;
 
-/* Insert function */
-void ht_insert(hashtable_t, void *, void *);
+    struct hlist_head *h = &map->ht[hash(key, map->bits)];
+    struct hlist_node *n = &kn->node, *first = h->first;
 
-/* Get functions */
-void ht_get(hashtable_t, void *, void *);
-bool ht_isempty(hashtable_t);
+    n->next = first;
+    if (first)
+        first->pprev = &n->next;
+    h->first = n;
+    n->pprev = &h->first;
+}
 
-/* Remove functions */
-void ht_remove();
-void ht_clear();
+void map_delete(map_t *map)
+{
+    if (!map)
+        return;
 
-/* Destructor */
-void ht_delete();
+    for (int i = 0; i < MAP_HASH_SIZE(map->bits); i++) {
+        struct hlist_head *head = &map->ht[i];
+        for (struct hlist_node *p = head->first; p;) {
+            struct hash_key *kn = container_of(p, struct hash_key, node);
+            struct hlist_node *n = p;
+            p = p->next;
+
+            if (!n->pprev) /* unhashed */
+                goto bail;
+
+            struct hlist_node *next = n->next, **pprev = n->pprev;
+            *pprev = next;
+            if (next)
+                next->pprev = pprev;
+            n->next = NULL, n->pprev = NULL;
+
+        bail:
+            free(kn->data);
+            free(kn);
+        }
+    }
+    free(map);
+}
