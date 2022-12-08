@@ -2,6 +2,10 @@
  * This is not a bad strategy if you’ve only got a few items
  */
 
+/* ToDO:
+ * 		1. Change map to hashtable
+ */
+
 #pragma once
 
 #include <stdbool.h>
@@ -10,12 +14,12 @@
 
 struct hlist_node { struct hlist_node *next, **pprev; };
 struct hlist_head { struct hlist_node *first; };
-typedef struct { int bits; struct hlist_head *ht; } map_t;
+typedef struct { int bits; struct hlist_head *ht; } hashtable_t;
 
 #define MAP_HASH_SIZE(bits) (1 << bits)
 
-map_t *map_init(int bits) {
-    map_t *map = malloc(sizeof(map_t));
+hashtable_t *hash_init(int bits) {
+    hashtable_t *map = malloc(sizeof(hashtable_t));
     if (!map)
         return NULL;
 
@@ -49,7 +53,7 @@ static inline unsigned int hash(unsigned int val, unsigned int bits) {
     return (val * GOLDEN_RATIO_32) >> (32 - bits);
 }
 
-static struct hash_key *find_key(map_t *map, int key) {
+static struct hash_key *find_key(hashtable_t *map, int key) {
     struct hlist_head *head = &(map->ht)[hash(key, map->bits)];
     for (struct hlist_node *p = head->first; p; p = p->next) {
         struct hash_key *kn = container_of(p, struct hash_key, node);
@@ -59,13 +63,13 @@ static struct hash_key *find_key(map_t *map, int key) {
     return NULL;
 }
 
-void *map_get(map_t *map, int key)
+void *map_get(hashtable_t *map, int key)
 {
     struct hash_key *kn = find_key(map, key);
     return kn ? kn->data : NULL;
 }
 
-void map_add(map_t *map, int key, void *data)
+void map_add(hashtable_t *map, int key, void *data)
 {
     struct hash_key *kn = find_key(map, key);
     if (kn)
@@ -90,7 +94,7 @@ void map_add(map_t *map, int key, void *data)
  * 		map_isempty()
  */
 
-void map_delete(map_t *map)
+void map_delete(hashtable_t *map)
 {
     if (!map)
         return;
