@@ -4,6 +4,6 @@ project(CLib
   DESCRIPTION "CLib for coding interview"
 )
 
-add_executable(ypaskell_C_library src/main.c)
+add_executable(CLib src/main.c)
 
 add_subdirectory(src)
