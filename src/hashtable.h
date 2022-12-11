@@ -14,7 +14,7 @@ typedef struct { int bits; struct hlist_head *ht; } map_t;
 
 #define MAP_HASH_SIZE(bits) (1 << bits)
 
-map_t *hash_init(int bits) {
+map_t *map_init(int bits) {
     map_t *map = malloc(sizeof(map_t));
     if (!map)
         return NULL;
